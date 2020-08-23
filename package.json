@@ -1,0 +1,29 @@
+{
+  "name": "@bluefin605/entmodeller-devops-enumerator",
+  "version": "1.0.0",
+  "license": "ISC",
+  "description": "",
+  "main": "./build/enumerator.js",
+  "keywords": [],
+  "author": "",
+  "scripts": {
+    "test": "jest ./src",
+    "precompile": "npm run build:clean",
+    "compile": "npm run compile:js",
+    "prepare": "npm run build",
+    "build": "npm run compile",
+    "build:clean": "rimraf build/*",
+    "compile:js": "babel src -d build"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.0",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/preset-env": "^7.9.5",
+    "jest": "^25.3.0",
+    "rimraf": "^3.0.2"
+  },
+  "dependencies": {
+    "hjson": "^3.2.1"
+  }
+}
