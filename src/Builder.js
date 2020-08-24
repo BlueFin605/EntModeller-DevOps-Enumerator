@@ -1,4 +1,5 @@
 var devopsenum = require('../src/enumerator.js')
+var fs = require('fs');
 
 const DevOpsEnum = (function () {
     const _private = new WeakMap()
@@ -25,6 +26,17 @@ const DevOpsEnum = (function () {
             class Builder {
                 constructor() {
                     internal(this).filterConfig = new Map()
+                }
+
+                addConfigFromFile(filename)
+                {
+                    let configText = fs.readFileSync(filename);
+                    let config = JSON.parse(configText);
+
+                    internal(this).pat = config.pat;
+                    internal(this).organization = config.organization;
+                    internal(this).project = config.project;
+                    return this
                 }
 
                 addPersonalAccessToken(pat) {
