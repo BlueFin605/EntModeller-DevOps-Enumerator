@@ -15,15 +15,15 @@ async function enumerateAzureReleases(pat, organization, project, filter, filter
     // try {
     let releases = await getProductionReleases(pat, organization, project, filter, filterConfig);
 
-    console.log('============================================releases===================================')
-    releases.forEach(r => console.log(`${r.pipeline} ${r.release}`));
-    console.log('============================================releases===================================')
+    // console.log('============================================releases===================================')
+    // releases.forEach(r => console.log(`${r.pipeline} ${r.release}`));
+    // console.log('============================================releases===================================')
 
     let withSettings = await Promise.all(releases.map(r => addSettings(pat, organization, project, r)));
 
-    console.log('---------------------------------------------------------------')
-    console.log(JSON.stringify(withSettings));
-    console.log('---------------------------------------------------------------')
+    // console.log('---------------------------------------------------------------')
+    // console.log(JSON.stringify(withSettings));
+    // console.log('---------------------------------------------------------------')
 
     return withSettings;
 }
