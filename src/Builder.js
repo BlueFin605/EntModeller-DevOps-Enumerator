@@ -14,21 +14,23 @@ const DevOpsEnum = (function () {
     }
 
     class DevOpsEnum {
-        constructor(pat, organization, project, filter, filterConfig) {
+        constructor(pat, organization, project, filter, filterConfig, attachmentsConfig) {
             internal(this).pat = pat;
             internal(this).organization = organization;
             internal(this).project = project;
             internal(this).filter = filter;
             internal(this).filterConfig = filterConfig;
+            internal(this).attachmentsConfig = attachmentsConfig;
         }
 
         static get Builder() {
             class Builder {
                 constructor() {
                     internal(this).filterConfig = new Map()
+                    internal(this).attachmentsConfig = new Map()
                 }
 
-                addConfigFromFile(filename)
+                setConfigFromFile(filename)
                 {
                     let configText = fs.readFileSync(filename);
                     let config = JSON.parse(configText);
@@ -39,17 +41,17 @@ const DevOpsEnum = (function () {
                     return this
                 }
 
-                addPersonalAccessToken(pat) {
+                setPersonalAccessToken(pat) {
                     internal(this).pat = pat;
                     return this
                 }
 
-                addOrgaization(organization) {
+                setOrgaization(organization) {
                     internal(this).organization = organization;
                     return this
                 }
 
-                addProject(project) {
+                setProject(project) {
                     internal(this).project = project;
                     return this
                 }
@@ -59,13 +61,25 @@ const DevOpsEnum = (function () {
                     internal(this).filterConfig.set('_parser', nameParser);
                     return this
                 }
+                
+                addAttachment(id, filename, filter) {
+                    let config = {
+                        id: id,
+                        filename: filename,
+                        filter: filter
+                    }
+
+                    internal(this).attachmentsConfig.set(id, config);
+                    return this
+                }
 
                 build() {
                     var tracer = new DevOpsEnum(internal(this).pat,
                         internal(this).organization,
                         internal(this).project,
                         internal(this).filter,
-                        internal(this).filterConfig);
+                        internal(this).filterConfig,
+                        internal(this).attachmentsConfig);
                     return tracer;
                 }
             }
@@ -74,7 +88,7 @@ const DevOpsEnum = (function () {
         }
 
         async enumerateDevOps() {
-            let results = devopsenum(internal(this).pat, internal(this).organization, internal(this).project, internal(this).filter, internal(this).filterConfig);
+            let results = devopsenum(internal(this).pat, internal(this).organization, internal(this).project, internal(this).filter, internal(this).filterConfig, internal(this).attachmentsConfig);
             return results;
         }
     }

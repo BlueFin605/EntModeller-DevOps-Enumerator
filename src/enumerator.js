@@ -3,6 +3,7 @@ const https = require('https');
 // const ent = require('@bluefin605/entmodeller');
 // const { release } = require('os');
 var Hjson = require('hjson');
+const { release } = require('os');
 // const { isNullOrUndefined } = require('util');
 
 function auth(pat) {
@@ -11,45 +12,58 @@ function auth(pat) {
     return bufferPat.toString('base64')
 }
 
-async function enumerateAzureReleases(pat, organization, project, filter, filterConfig) {
+async function enumerateAzureReleases(pat, organization, project, filter, filterConfig, attachmentsConfig) {
     // try {
     let releases = await getProductionReleases(pat, organization, project, filter, filterConfig);
+
+    releases.forEach(r => r.attachments = new Map());
 
     // console.log('============================================releases===================================')
     // releases.forEach(r => console.log(`${r.pipeline} ${r.release}`));
     // console.log('============================================releases===================================')
 
-    let withSettings = await Promise.all(releases.map(r => addSettings(pat, organization, project, r)));
 
-    // console.log('---------------------------------------------------------------')
+    await Promise.all(await Array.from(attachmentsConfig).map(a => addAttachment(pat, organization, project, releases, a)));
+
+     // console.log('---------------------------------------------------------------')
     // console.log(JSON.stringify(withSettings));
     // console.log('---------------------------------------------------------------')
 
-    return withSettings;
+    return releases;
+}
+
+async function addAttachment(pat, organization, project, releases, attachment) {
+    return await Promise.all(releases.map(r => addAttachmentToRelease(pat, organization, project, r, attachment)));
 }
 
 
-async function addSettings(pat, organization, project, resource) {
-    resource.app = await getAppSettings(pat, organization, project, resource);
+async function addAttachmentToRelease(pat, organization, project, release, attachment) {
+    let attachmentDetails = {
+        app: await getAttachment(pat, organization, project, release, attachment),
+        environment: await restGET(release.environmenturl, pat)
+    };
 
-    resource.environment = await restGET(resource.environmenturl, pat);
+    if (attachmentDetails.app == null || attachmentDetails == null)
+        return release;
+        
+        release.attachments.set(attachment.id, attachmentDetails);
 
-    return resource;
+    return release;
 }
 
-async function getAppSettings(pat, organization, project, resource) {
-    let commitQuery = `https://dev.azure.com/${organization}/${project}/_apis/git/repositories/${resource.artifacts.repoId}/commits/${resource.artifacts.sourceVersionId}?api-version=5.1`;
+async function getAttachment(pat, organization, project, release, attachment) {
+    let commitQuery = `https://dev.azure.com/${organization}/${project}/_apis/git/repositories/${release.artifacts.repoId}/commits/${release.artifacts.sourceVersionId}?api-version=5.1`;
     let commit = await restGET(commitQuery, pat);
-    if (commit === null)
+    if (commit == null)
         return null;
 
-    let treeQuery = `https://dev.azure.com/${organization}/${project}/_apis/git/repositories/${resource.artifacts.repoId}/trees/${commit.treeId}?recursive=true&api-version=5.1`;
+    let treeQuery = `https://dev.azure.com/${organization}/${project}/_apis/git/repositories/${release.artifacts.repoId}/trees/${commit.treeId}?recursive=true&api-version=5.1`;
     let tree = await restGET(treeQuery, pat);
-    if (tree === undefined || tree.treeEntries === undefined)
+    if (tree == null || tree.treeEntries == null)
         return null;
 
     let appsettings = tree.treeEntries.filter(t => {
-        return t.relativePath.endsWith('/appsettings.json') && t.relativePath.includes('Unit') === false;
+        return t.relativePath.endsWith(`/${attachment.filename}`) && (attachment.filter == null || attachment.filter(t) == true);
     });
     if (appsettings.length == 0)
         return null;
@@ -81,7 +95,7 @@ async function getProductionReleases(pat, organization, project, filter, filterC
 
     do {
         // while (result.results.length > 0) {    
-        console.log(result.last);
+        console.log(`last:${result.last}`);
         // let newResults = allResults.concat(result.results)
         let newResults = [...allResults, ...result.results];
 
@@ -152,7 +166,7 @@ async function getFilteredReleasesBeforeDate(pat, organization, project, filter,
         mapped.status = m.deploymentStatus
         mapped.artifacts = {};
 
-        let repos = m.release.artifacts.filter(f => f.definitionReference !== undefined && f.definitionReference.repository !== undefined);
+        let repos = m.release.artifacts.filter(f => f.definitionReference != null && f.definitionReference.repository != null);
         if (repos.length > 0) {
             mapped.artifacts.repoId = repos[0].definitionReference.repository.id;
             mapped.artifacts.repoName = repos[0].definitionReference.repository.name;
@@ -182,7 +196,7 @@ function restGET(url, pat) {
             },
         };
 
-        console.log(url);
+        console.log(`ger url:${url}`);
         https.get(url, options, (resp) => {
             // console.log(resp.headers);
 
@@ -201,12 +215,13 @@ function restGET(url, pat) {
                     // console.log('=========================================================================================================================================');
                     resolve(ob);
                 } catch (error) {
-                    console.log('Exception caught');
-                    console.log('=========================================================================================================================================');
-                    console.log(url);
-                    console.log(error);
+                    console.log(`${url} - ${error}`);
+                    // console.log('Exception caught');
+                    // console.log('=========================================================================================================================================');
+                    // console.log(url);
+                    // console.log(error);
                     // console.log(data);
-                    console.log('=========================================================================================================================================');
+                    // console.log('=========================================================================================================================================');
                     resolve(null);
                 }
             });
@@ -233,7 +248,7 @@ function restDownload(url, pat) {
             },
         };
 
-        console.log(url);
+        console.log(`download:${url}`);
         https.get(url, options, (resp) => {
             // console.log(resp.headers);
 

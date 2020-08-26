@@ -1,8 +1,4 @@
 var enumBuilder = require('../src/Builder.js')
-// var devopsenum = require('../src/enumerator.js')
-// var fs = require('fs');
-
-
 
 async function enumerateDevOps() {
 
@@ -10,15 +6,16 @@ async function enumerateDevOps() {
   // let config = JSON.parse(configText);
 
   var enumerator = new enumBuilder.Builder()
-    .addConfigFromFile('examples\\config.json')
-    // .addPersonalAccessToken(config.pat)
-    // .addOrgaization(config.organization)
-    // .addProject(config.project)
+    .setConfigFromFile('examples\\config.json')
+    // .setPersonalAccessToken(config.pat)
+    // .setOrgaization(config.organization)
+    // .setProject(config.project)
     .addDefaultFilter(isDev)
+    .addAttachment('appsettings','appsettings.json', (a) => a.relativePath.includes('Unit') === false)
     .build()
 
   let output = await enumerator.enumerateDevOps();
-  console.log(output);
+  console.log(JSON.stringify(output));
 }
 
 
