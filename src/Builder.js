@@ -1,4 +1,4 @@
-var devopsenum = require('../src/enumerator.js')
+var devopsenum = require('./enumerator.js')
 var fs = require('fs');
 
 const DevOpsEnum = (function () {
