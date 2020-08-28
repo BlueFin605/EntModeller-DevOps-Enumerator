@@ -23,7 +23,7 @@ async function enumerateAzureReleases(pat, organization, project, filter, filter
     // console.log('============================================releases===================================')
 
 
-    await Promise.all(await Array.from(attachmentsConfig).map(a => addAttachment(pat, organization, project, releases, a)));
+    await Promise.all(await Array.from(attachmentsConfig).map(a => addAttachment(pat, organization, project, releases, a[1])));
 
      // console.log('---------------------------------------------------------------')
     // console.log(JSON.stringify(withSettings));
@@ -72,12 +72,10 @@ async function getAttachment(pat, organization, project, release, attachment) {
     let validFile = file;
 
     try {
-        let start = file.indexOf('{');
-        validFile = file.substring(start);
-        // console.log(`${resource.pipeline}:${resource.release}:${resource.artifacts.sourceVersionId}:${appsettings[0].url}======================================================================================================================`);
-        // console.log(file);
-        let cfg = Hjson.parse(validFile);
-        return cfg;
+        if (attachment.mapper != null)
+            return attachment.mapper(file);
+
+        return file;
     }
     catch (error) {
         // console.log("======================================================================================================================");
@@ -269,4 +267,13 @@ function restDownload(url, pat) {
     });
 }
 
+function jsonMapper(contents)
+{
+    let start = contents.indexOf('{');
+    validFile = contents.substring(start);
+    let cfg = Hjson.parse(validFile);
+    return cfg;
+}
+
 module.exports = enumerateAzureReleases;
+module.exports.JsonMapper = jsonMapper;

@@ -11,7 +11,7 @@ async function enumerateDevOps() {
     // .setOrgaization(config.organization)
     // .setProject(config.project)
     .addDefaultFilter(isDev)
-    .addAttachment('appsettings','appsettings.json', (a) => a.relativePath.includes('Unit') === false)
+    .addAttachment('appsettings','appsettings.json', (a) => a.relativePath.includes('Unit') === false, enumBuilder.JsonMapper)
     .build()
 
   let output = await enumerator.enumerateDevOps();
@@ -19,8 +19,8 @@ async function enumerateDevOps() {
 }
 
 
-function isDev(name) {
-  return name.toLowerCase().includes("dev");
+function isDev(releaseName, environmentName) {
+  return environmentName.toLowerCase().includes("dev");
 }
 
 enumerateDevOps();

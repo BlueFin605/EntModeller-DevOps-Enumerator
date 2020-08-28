@@ -62,11 +62,12 @@ const DevOpsEnum = (function () {
                     return this
                 }
                 
-                addAttachment(id, filename, filter) {
+                addAttachment(id, filename, filter, mapper) {
                     let config = {
                         id: id,
                         filename: filename,
-                        filter: filter
+                        filter: filter,
+                        mapper: mapper
                     }
 
                     internal(this).attachmentsConfig.set(id, config);
@@ -100,12 +101,9 @@ function doesMatchDefaultFilter(dep, filterConfig) {
     if (filterConfig !== null && filterConfig.has('_parser'))
     {
         let nameParser = filterConfig.get('_parser');
-        if (nameParser !== null && nameParser(dep.releaseEnvironment.name) === false)
+        if (nameParser !== null && nameParser(dep.releaseDefinition.name, dep.releaseEnvironment.name) === false)
             return false;
     }
-
-    // if (isDev(dep.releaseEnvironment.name) === false)
-    //     return false;
 
     if (dep.release === undefined)
         return false;
@@ -124,3 +122,5 @@ function doesMatchDefaultFilter(dep, filterConfig) {
 }
 
 module.exports.Builder = DevOpsEnum.Builder
+
+module.exports.JsonMapper = devopsenum.JsonMapper;
