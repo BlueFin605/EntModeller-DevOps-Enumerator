@@ -28,17 +28,13 @@ async function enumerateAzureReleases(pat, organization, project, filter, filter
     // releases.forEach(r => console.log(`${r.pipeline} ${r.release}`));
     // console.log('============================================releases===================================')
 
-    //get all the environment
+    //get all the environment variables
     await Promise.all(azureReleases.map(azureRelease => addEnvironment(azureRelease, pat)));
 
-    //get al teh attachements
+    //get all the attachements
     await Promise.all(/*await*/ Array.from(attachmentsConfig).map(a => addAttachment(pat, organization, project, azureReleases, a[1])));
 
-    // console.log('---------------------------------------------------------------')
-    // console.log(JSON.stringify(withSettings));
-    // console.log('---------------------------------------------------------------')
-
-    azureReleases.forEach(r => console.log(r.environment));
+    // azureReleases.forEach(r => console.log(r.environment));
 
     return azureReleases;
 }
