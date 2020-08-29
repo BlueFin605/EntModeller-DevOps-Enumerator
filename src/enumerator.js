@@ -16,39 +16,57 @@ async function enumerateAzureReleases(pat, organization, project, filter, filter
     // try {
     let releases = await getProductionReleases(pat, organization, project, filter, filterConfig);
 
-    releases.forEach(r => r.attachments = new Map());
+    let azureReleases = releases.map(m => {
+        return {
+            release: m,
+            attachments: new Map(),
+            environment: null //await restGET(release.environmenturl, pat)
+        }
+    });
 
     // console.log('============================================releases===================================')
     // releases.forEach(r => console.log(`${r.pipeline} ${r.release}`));
     // console.log('============================================releases===================================')
 
+    //get all the environment
+    await Promise.all(azureReleases.map(azureRelease => addEnvironment(azureRelease, pat)));
 
-    await Promise.all(await Array.from(attachmentsConfig).map(a => addAttachment(pat, organization, project, releases, a[1])));
+    //get al teh attachements
+    await Promise.all(/*await*/ Array.from(attachmentsConfig).map(a => addAttachment(pat, organization, project, azureReleases, a[1])));
 
-     // console.log('---------------------------------------------------------------')
+    // console.log('---------------------------------------------------------------')
     // console.log(JSON.stringify(withSettings));
     // console.log('---------------------------------------------------------------')
 
-    return releases;
+    azureReleases.forEach(r => console.log(r.environment));
+
+    return azureReleases;
 }
 
-async function addAttachment(pat, organization, project, releases, attachment) {
-    return await Promise.all(releases.map(r => addAttachmentToRelease(pat, organization, project, r, attachment)));
+async function addEnvironment(azureRelease, pat)
+{
+    azureRelease.environment = await restGET(azureRelease.release.environmenturl, pat);
+    return azureRelease.environment;
 }
 
+async function addAttachment(pat, organization, project, azureReleases, attachment) {
+    return await Promise.all(azureReleases.map(r => addAttachmentToRelease(pat, organization, project, r, attachment)));
+}
 
-async function addAttachmentToRelease(pat, organization, project, release, attachment) {
-    let attachmentDetails = {
-        app: await getAttachment(pat, organization, project, release, attachment),
-        environment: await restGET(release.environmenturl, pat)
-    };
+async function addAttachmentToRelease(pat, organization, project, azureRelease, attachment) {
+    // let attachmentDetails = {
+    //     app: await getAttachment(pat, organization, project, release, attachment),
+    //     environment: await restGET(release.environmenturl, pat)
+    // };
 
-    if (attachmentDetails.app == null || attachmentDetails == null)
-        return release;
-        
-        release.attachments.set(attachment.id, attachmentDetails);
+    let attachmentDetails = await getAttachment(pat, organization, project, azureRelease.release, attachment);
 
-    return release;
+    if (attachmentDetails == null)
+        return azureRelease;
+
+    azureRelease.attachments.set(attachment.id, attachmentDetails);
+
+    return azureRelease;
 }
 
 async function getAttachment(pat, organization, project, release, attachment) {
@@ -145,8 +163,7 @@ async function getReleasesBeforeDate(pat, organization, project, filter, filterC
 async function getFilteredReleasesBeforeDate(pat, organization, project, filter, filterConfig, minStart) {
     let query = `https://vsrm.dev.azure.com/${organization}/${project}/_apis/release/deployments?api-version=5.1&deploymentStatus=succeeded&$top=100&queryOrder=ascending&minStartedTime=${minStart}`;
     let deployment = await restGET(query, pat);
-    if (deployment === null)
-    {
+    if (deployment === null) {
         throw 'fatal error';
     }
     console.log(`REST results count:${deployment.count}`);
@@ -267,8 +284,7 @@ function restDownload(url, pat) {
     });
 }
 
-function jsonMapper(contents)
-{
+function jsonMapper(contents) {
     let start = contents.indexOf('{');
     validFile = contents.substring(start);
     let cfg = Hjson.parse(validFile);
