@@ -12,7 +12,7 @@ function auth(pat) {
     return bufferPat.toString('base64')
 }
 
-async function enumerateAzureReleases(pat, organization, project, filter, filterConfig, attachmentsConfig) {
+async function enumerateAzureReleases(pat, organization, project, filter, filterConfig, attachmentsConfig, incEnvironment) {
     // try {
     let releases = await getProductionReleases(pat, organization, project, filter, filterConfig);
 
@@ -29,7 +29,9 @@ async function enumerateAzureReleases(pat, organization, project, filter, filter
     // console.log('============================================releases===================================')
 
     //get all the environment variables
-    await Promise.all(azureReleases.map(azureRelease => addEnvironment(azureRelease, pat)));
+    if (incEnvironment) {
+        await Promise.all(azureReleases.map(azureRelease => addEnvironment(azureRelease, pat)));
+    }
 
     //get all the attachements
     await Promise.all(/*await*/ Array.from(attachmentsConfig).map(a => addAttachment(pat, organization, project, azureReleases, a[1])));

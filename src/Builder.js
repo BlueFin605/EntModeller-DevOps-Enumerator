@@ -14,13 +14,14 @@ const DevOpsEnum = (function () {
     }
 
     class DevOpsEnum {
-        constructor(pat, organization, project, filter, filterConfig, attachmentsConfig) {
+        constructor(pat, organization, project, filter, filterConfig, attachmentsConfig, incEnvironment) {
             internal(this).pat = pat;
             internal(this).organization = organization;
             internal(this).project = project;
             internal(this).filter = filter;
             internal(this).filterConfig = filterConfig;
             internal(this).attachmentsConfig = attachmentsConfig;
+            internal(this).incEnvironment = incEnvironment;
         }
 
         static get Builder() {
@@ -74,13 +75,19 @@ const DevOpsEnum = (function () {
                     return this
                 }
 
+                retrieveEnvironmentVariables() {
+                    internal(this).incEnvironment = true;
+                    return this
+                }
+
                 build() {
                     var tracer = new DevOpsEnum(internal(this).pat,
                         internal(this).organization,
                         internal(this).project,
                         internal(this).filter,
                         internal(this).filterConfig,
-                        internal(this).attachmentsConfig);
+                        internal(this).attachmentsConfig,
+                        internal(this).incEnvironment);
                     return tracer;
                 }
             }
@@ -89,7 +96,7 @@ const DevOpsEnum = (function () {
         }
 
         async enumerateDevOps() {
-            let results = devopsenum(internal(this).pat, internal(this).organization, internal(this).project, internal(this).filter, internal(this).filterConfig, internal(this).attachmentsConfig);
+            let results = devopsenum(internal(this).pat, internal(this).organization, internal(this).project, internal(this).filter, internal(this).filterConfig, internal(this).attachmentsConfig, internal(this).incEnvironment);
             return results;
         }
     }

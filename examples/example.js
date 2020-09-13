@@ -12,6 +12,7 @@ async function enumerateDevOps() {
     // .setProject(config.project)
     .addDefaultFilter(isDev)
     .addAttachment('appsettings','appsettings.json', (a) => a.relativePath.includes('Unit') === false, enumBuilder.JsonMapper)
+    .retrieveEnvironmentVariables()
     .build()
 
   let output = await enumerator.enumerateDevOps();
@@ -20,6 +21,9 @@ async function enumerateDevOps() {
 
 
 function isDev(releaseName, environmentName) {
+  if (releaseName.includes('Fre.Consignment.Api v2 - CD (OpenShift)') === true)
+    return false;
+
   return environmentName.toLowerCase().includes("dev");
 }
 
