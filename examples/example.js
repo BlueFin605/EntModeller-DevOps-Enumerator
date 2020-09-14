@@ -21,8 +21,8 @@ async function enumerateDevOps() {
 
 
 function isDev(releaseName, environmentName) {
-  if (releaseName.includes('Fre.Consignment.Api v2 - CD (OpenShift)') === true)
-    return false;
+  // if (releaseName.trim().includes('Fre.Consignment.Api v2') === false)
+  //     return false;
 
   return environmentName.toLowerCase().includes("dev");
 }

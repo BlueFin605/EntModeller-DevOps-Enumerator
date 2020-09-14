@@ -1,10 +1,6 @@
 const https = require('https');
-// const url = require('url');
-// const ent = require('@bluefin605/entmodeller');
-// const { release } = require('os');
 var Hjson = require('hjson');
 const { release } = require('os');
-// const { isNullOrUndefined } = require('util');
 
 function auth(pat) {
     let patStr = `:${pat}`;
@@ -13,50 +9,40 @@ function auth(pat) {
 }
 
 async function enumerateAzureReleases(pat, organization, project, filter, filterConfig, attachmentsConfig, incEnvironment) {
-    // try {
     let releases = await getProductionReleases(pat, organization, project, filter, filterConfig);
 
-    let azureReleases = releases.map(m => {
-        return {
-            release: m,
-            attachments: new Map(),
-            environment: null //await restGET(release.environmenturl, pat)
-        }
-    });
-
-    // console.log('============================================releases===================================')
-    // releases.forEach(r => console.log(`${r.pipeline} ${r.release}`));
-    // console.log('============================================releases===================================')
-
-    //get all the environment variables
-    if (incEnvironment) {
-        await Promise.all(azureReleases.map(azureRelease => addEnvironment(azureRelease, pat)));
-    }
-
-    //get all the attachements
-    await Promise.all(/*await*/ Array.from(attachmentsConfig).map(a => addAttachment(pat, organization, project, azureReleases, a[1])));
-
-    // azureReleases.forEach(r => console.log(r.environment));
+    let azureReleases = await Promise.all(releases.map(p => findAdditionsForPipeline(pat, organization, project, p, attachmentsConfig, incEnvironment)));
 
     return azureReleases;
 }
 
-async function addEnvironment(azureRelease, pat)
-{
-    azureRelease.environment = await restGET(azureRelease.release.environmenturl, pat);
-    return azureRelease.environment;
+async function findAdditionsForPipeline(pat, organization, project, pipeline, attachmentsConfig, incEnvironment) {
+    return await Promise.all(pipeline.map(m => findAdditions(pat, organization, project, m, attachmentsConfig, incEnvironment)));
 }
 
-async function addAttachment(pat, organization, project, azureReleases, attachment) {
-    return await Promise.all(azureReleases.map(r => addAttachmentToRelease(pat, organization, project, r, attachment)));
+async function findAdditions(pat, organization, project, release, attachmentsConfig, incEnvironment) {
+    let mapped = {
+        release: release,
+        attachments: new Map(),
+        environment: null //await restGET(release.environmenturl, pat)
+    };
+
+    //get all the environment variables
+    if (incEnvironment) {
+        mapped.environment = await findEnvironment(release, pat);
+    }
+
+    //get all the attachements
+    await Promise.all(Array.from(attachmentsConfig).map(a => addAttachmentToRelease(pat, organization, project, mapped, a[1])));
+
+    return mapped;
+}
+
+async function findEnvironment(release, pat) {
+    return await restGET(release.environmenturl, pat);
 }
 
 async function addAttachmentToRelease(pat, organization, project, azureRelease, attachment) {
-    // let attachmentDetails = {
-    //     app: await getAttachment(pat, organization, project, release, attachment),
-    //     environment: await restGET(release.environmenturl, pat)
-    // };
-
     let attachmentDetails = await getAttachment(pat, organization, project, azureRelease.release, attachment);
 
     if (attachmentDetails == null)
@@ -117,20 +103,18 @@ async function getProductionReleases(pat, organization, project, filter, filterC
         result = await getReleasesBeforeDate(pat, organization, project, filter, filterConfig, result.last);
     } while (result.last != null)
 
-    // return allResults;
 
     var latestOnly = allResults
         .reduce((accumulator, item) => {
             if (item.pipeline in accumulator) {
-                if (item.releaseid > accumulator[item.pipeline].releaseid) {
-                    accumulator[item.pipeline] = item;
+                if (item.releaseid > accumulator[item.pipeline][0].releaseid) {
+                    accumulator[item.pipeline] = [item];
                 }
             } else {
-                accumulator[item.pipeline] = item;
+                accumulator[item.pipeline] = [item];
             }
             return accumulator;
         }, {});
-
 
     return Object.values(latestOnly);
 }
@@ -140,6 +124,8 @@ async function getReleasesBeforeDate(pat, organization, project, filter, filterC
 
     console.log(`REST results count:${deployments.results.length}`);
 
+    //lets just take the latest of a particular release
+    //TODO handle multiple releases within the same batch of releases
     var dictionary = deployments.results
         .reduce((accumulator, item) => {
             accumulator[item.releaseid] = item;
