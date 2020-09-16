@@ -10,7 +10,7 @@ async function enumerateDevOps() {
     // .setPersonalAccessToken(config.pat)
     // .setOrgaization(config.organization)
     // .setProject(config.project)
-    .addDefaultFilter(isDev)
+    .useDefaultFilter(isDev)
     .addAttachment('appsettings','appsettings.json', (a) => a.relativePath.includes('Unit') === false, enumBuilder.JsonMapper)
     .retrieveEnvironmentVariables()
     // .latestReleasesPerEnvironment()

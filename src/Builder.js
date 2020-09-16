@@ -52,7 +52,7 @@ const DevOpsEnum = (function () {
                     return this
                 }
 
-                addDefaultFilter(nameParser) {
+                useDefaultFilter(nameParser) {
                     internal(this).filter = doesMatchDefaultFilter;
                     internal(this).filterConfig.set('_parser', nameParser);
                     return this
@@ -121,10 +121,10 @@ function doesMatchDefaultFilter(dep, filterConfig) {
             return false;
     }
 
-    if (dep.release === undefined)
+    if (dep.release == null)
         return false;
 
-    if (dep.release.artifacts === undefined)
+    if (dep.release.artifacts == null)
         return false;
 
     let repos = dep.release.artifacts.filter(f => {
