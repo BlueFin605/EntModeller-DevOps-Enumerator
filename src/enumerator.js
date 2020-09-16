@@ -8,16 +8,19 @@ function auth(pat) {
     return bufferPat.toString('base64')
 }
 
-async function enumerateAzureReleases(pat, organization, project, filter, filterConfig, attachmentsConfig, incEnvironment) {
-    let releases = await getProductionReleases(pat, organization, project, filter, filterConfig);
+async function enumerateAzureReleases(configuration) {
+    let releases = await getProductionReleases(configuration.pat, configuration.organization, configuration.project, configuration.filter, configuration.filterConfig, configuration.aggregateReleases);
 
-    let azureReleases = await Promise.all(releases.map(p => findAdditionsForPipeline(pat, organization, project, p, attachmentsConfig, incEnvironment)));
+    let azureReleases = await Promise.all(releases.map(p => findAdditionsForPipeline(configuration.pat, configuration.organization, configuration.project, p, configuration.attachmentsConfig, configuration.incEnvironment)));
 
     return azureReleases;
 }
 
 async function findAdditionsForPipeline(pat, organization, project, pipeline, attachmentsConfig, incEnvironment) {
-    return await Promise.all(pipeline.map(m => findAdditions(pat, organization, project, m, attachmentsConfig, incEnvironment)));
+    return extended = {
+        pipeline: pipeline.pipeline,
+        items: await Promise.all(pipeline.items.map(m => findAdditions(pat, organization, project, m, attachmentsConfig, incEnvironment)))
+    }
 }
 
 async function findAdditions(pat, organization, project, release, attachmentsConfig, incEnvironment) {
@@ -88,7 +91,7 @@ async function getAttachment(pat, organization, project, release, attachment) {
     }
 }
 
-async function getProductionReleases(pat, organization, project, filter, filterConfig) {
+async function getProductionReleases(pat, organization, project, filter, filterConfig, aggregateReleases) {
     let minStart = '2010-01-01T003:00:00.00Z';
     let result = await getReleasesBeforeDate(pat, organization, project, filter, filterConfig, minStart);
     let allResults = [];
@@ -104,17 +107,7 @@ async function getProductionReleases(pat, organization, project, filter, filterC
     } while (result.last != null)
 
 
-    var latestOnly = allResults
-        .reduce((accumulator, item) => {
-            if (item.pipeline in accumulator) {
-                if (item.releaseid > accumulator[item.pipeline][0].releaseid) {
-                    accumulator[item.pipeline] = [item];
-                }
-            } else {
-                accumulator[item.pipeline] = [item];
-            }
-            return accumulator;
-        }, {});
+    var latestOnly = aggregateReleases(allResults);
 
     return Object.values(latestOnly);
 }
@@ -128,12 +121,13 @@ async function getReleasesBeforeDate(pat, organization, project, filter, filterC
     //TODO handle multiple releases within the same batch of releases
     var dictionary = deployments.results
         .reduce((accumulator, item) => {
-            accumulator[item.releaseid] = item;
+            accumulator[`${item.releaseid}-${item.environment}`] = item;
             return accumulator;
         }, {});
 
     let filtered = [];
 
+    //turn it back from a dictionary to an array
     for (var key in dictionary) {
         filtered.push(dictionary[key]);
     }

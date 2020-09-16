@@ -14,25 +14,20 @@ const DevOpsEnum = (function () {
     }
 
     class DevOpsEnum {
-        constructor(pat, organization, project, filter, filterConfig, attachmentsConfig, incEnvironment) {
-            internal(this).pat = pat;
-            internal(this).organization = organization;
-            internal(this).project = project;
-            internal(this).filter = filter;
-            internal(this).filterConfig = filterConfig;
-            internal(this).attachmentsConfig = attachmentsConfig;
-            internal(this).incEnvironment = incEnvironment;
+        constructor(configuration) {
+            internal(this).configuration = configuration;
         }
 
         static get Builder() {
             class Builder {
                 constructor() {
+                    internal(this).filter = (dep, filterConfig) => true;
                     internal(this).filterConfig = new Map()
                     internal(this).attachmentsConfig = new Map()
+                    internal(this).aggregateReleases = aggregateAllReleases;
                 }
 
-                setConfigFromFile(filename)
-                {
+                setConfigFromFile(filename) {
                     let configText = fs.readFileSync(filename);
                     let config = JSON.parse(configText);
 
@@ -62,7 +57,7 @@ const DevOpsEnum = (function () {
                     internal(this).filterConfig.set('_parser', nameParser);
                     return this
                 }
-                
+
                 addAttachment(id, filename, filter, mapper) {
                     let config = {
                         id: id,
@@ -80,14 +75,29 @@ const DevOpsEnum = (function () {
                     return this
                 }
 
+                latestReleasesOnly() {
+                    internal(this).aggregateReleases = aggregateLatest;
+                    return this
+                }
+
+                latestReleasesPerEnvironment() {
+                    internal(this).aggregateReleases = aggregateLatestPerEnvironment;
+                    return this
+                }
+
                 build() {
-                    var tracer = new DevOpsEnum(internal(this).pat,
-                        internal(this).organization,
-                        internal(this).project,
-                        internal(this).filter,
-                        internal(this).filterConfig,
-                        internal(this).attachmentsConfig,
-                        internal(this).incEnvironment);
+                    let configuration = {
+                        pat: internal(this).pat,
+                        organization: internal(this).organization,
+                        project: internal(this).project,
+                        filter: internal(this).filter,
+                        filterConfig: internal(this).filterConfig,
+                        attachmentsConfig: internal(this).attachmentsConfig,
+                        incEnvironment: internal(this).incEnvironment,
+                        aggregateReleases: internal(this).aggregateReleases
+                    };
+
+                    var tracer = new DevOpsEnum(configuration);
                     return tracer;
                 }
             }
@@ -96,7 +106,7 @@ const DevOpsEnum = (function () {
         }
 
         async enumerateDevOps() {
-            let results = devopsenum(internal(this).pat, internal(this).organization, internal(this).project, internal(this).filter, internal(this).filterConfig, internal(this).attachmentsConfig, internal(this).incEnvironment);
+            let results = devopsenum(internal(this).configuration);
             return results;
         }
     }
@@ -105,8 +115,7 @@ const DevOpsEnum = (function () {
 }())
 
 function doesMatchDefaultFilter(dep, filterConfig) {
-    if (filterConfig !== null && filterConfig.has('_parser'))
-    {
+    if (filterConfig !== null && filterConfig.has('_parser')) {
         let nameParser = filterConfig.get('_parser');
         if (nameParser !== null && nameParser(dep.releaseDefinition.name, dep.releaseEnvironment.name) === false)
             return false;
@@ -126,6 +135,61 @@ function doesMatchDefaultFilter(dep, filterConfig) {
         return false;
 
     return true;
+}
+
+function aggregateLatest(releases) {
+    return releases.reduce((accumulator, item) => {
+        if (item.pipeline in accumulator) {
+            if (item.releaseid > accumulator[item.pipeline].items[0].releaseid) {
+                accumulator[item.pipeline] = {
+                    pipeline: item.pipeline,
+                    items: [item]
+                };
+            }
+        } else {
+            accumulator[item.pipeline] = {
+                pipeline: item.pipeline,
+                items: [item]
+            };
+        }
+        return accumulator;
+    }, {});
+}
+
+function aggregateLatestPerEnvironment(releases) {
+    return releases.reduce((accumulator, item) => {
+        if (item.pipeline in accumulator) {
+            let found = accumulator[item.pipeline].items.find(p => p.environment == item.environment);
+            if (found == null) {
+                accumulator[item.pipeline].items.push(item);
+            } else
+            if (item.releaseid > found.releaseid) {
+                let filtered = accumulator[item.pipeline].items.filter(p => p.environment != item.environment)
+                accumulator[item.pipeline].items = filtered;
+                accumulator[item.pipeline].items.push(item);
+            }
+        } else {
+            accumulator[item.pipeline] = {
+                pipeline: item.pipeline,
+                items: [item]
+            };
+        }
+        return accumulator;
+    }, {});
+}
+
+function aggregateAllReleases(releases) {
+    return releases.reduce((accumulator, item) => {
+        if (item.pipeline in accumulator) {
+            accumulator[item.pipeline].items.push(item);
+        } else {
+            accumulator[item.pipeline] = {
+                pipeline: item.pipeline,
+                items: [item]
+            };
+        }
+        return accumulator;
+    }, {});
 }
 
 module.exports.Builder = DevOpsEnum.Builder

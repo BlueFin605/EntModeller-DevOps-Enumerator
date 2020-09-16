@@ -13,6 +13,8 @@ async function enumerateDevOps() {
     .addDefaultFilter(isDev)
     .addAttachment('appsettings','appsettings.json', (a) => a.relativePath.includes('Unit') === false, enumBuilder.JsonMapper)
     .retrieveEnvironmentVariables()
+    // .latestReleasesPerEnvironment()
+    .latestReleasesOnly()
     .build()
 
   let output = await enumerator.enumerateDevOps();
