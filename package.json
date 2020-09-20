@@ -1,21 +1,21 @@
 {
   "name": "@bluefin605/entmodeller-devops-enumerator",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "license": "ISC",
   "description": "",
   "main": "./build/Builder.js",
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "@babel/cli": "^7.8.4",
-    "@babel/core": "^7.9.0",
+    "@babel/cli": "^7.11.6",
+    "@babel/core": "^7.11.6",
     "@babel/plugin-proposal-class-properties": "^7.8.3",
-    "@babel/preset-env": "^7.9.5",
+    "@babel/preset-env": "^7.11.5",
     "jest": "^25.3.0",
     "rimraf": "^3.0.2"
   },
   "dependencies": {
-    "hjson": "^3.2.1"
+    "axios": "^0.20.0"
   },
   "scripts": {
     "test": "jest ./src",

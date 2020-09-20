@@ -58,12 +58,12 @@ const DevOpsEnum = (function () {
                     return this
                 }
 
-                addAttachment(id, filename, filter, mapper) {
+                addAttachment(id, filename, filter, responseType) {
                     let config = {
                         id: id,
                         filename: filename,
                         filter: filter,
-                        mapper: mapper
+                        responseType: responseType
                     }
 
                     internal(this).attachmentsConfig.set(id, config);
@@ -193,5 +193,3 @@ function aggregateAllReleases(releases) {
 }
 
 module.exports.Builder = DevOpsEnum.Builder
-
-module.exports.JsonMapper = devopsenum.JsonMapper;

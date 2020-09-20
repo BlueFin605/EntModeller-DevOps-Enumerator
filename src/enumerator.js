@@ -1,6 +1,5 @@
-const https = require('https');
-var Hjson = require('hjson');
-const { release } = require('os');
+const axios = require('axios');
+// var PromisePool = require('es6-promise-pool')
 
 function auth(pat) {
     let patStr = `:${pat}`;
@@ -15,6 +14,24 @@ async function enumerateAzureReleases(configuration) {
 
     return azureReleases;
 }
+
+// async function enumerateAzureReleases(configuration) {
+//     let releases = await getProductionReleases(configuration.pat, configuration.organization, configuration.project, configuration.filter, configuration.filterConfig, configuration.aggregateReleases);
+
+//     let values = Array.from(releases.values());
+
+//     var promiseProducer = function* () {
+//         for (let index = 0; index < values.length; index++) {
+//             yield findAdditionsForPipeline(configuration.pat, configuration.organization, configuration.project, values[index], configuration.attachmentsConfig, configuration.incEnvironment);
+//         }
+//     }
+
+//     var concurrency = 3
+//     var pool = new PromisePool(promiseProducer, concurrency)
+//     let azureReleases = await pool.start()
+
+//     return azureReleases;
+// }
 
 async function findAdditionsForPipeline(pat, organization, project, pipeline, attachmentsConfig, incEnvironment) {
     return extended = {
@@ -73,22 +90,8 @@ async function getAttachment(pat, organization, project, release, attachment) {
     if (appsettings.length == 0)
         return null;
 
-    let file = await restDownload(appsettings[0].url, pat);
-    let validFile = file;
-
-    try {
-        if (attachment.mapper != null)
-            return attachment.mapper(file);
-
-        return file;
-    }
-    catch (error) {
-        // console.log("======================================================================================================================");
-        console.log(error);
-        console.log(validFile);
-        // console.log("----------------------------------------------------------------------------------------------------------------------");
-        return null;
-    }
+    let file = await restDownload(appsettings[0].url, pat, attachment.responseType);
+    return file;
 }
 
 async function getProductionReleases(pat, organization, project, filter, filterConfig, aggregateReleases) {
@@ -179,95 +182,45 @@ async function getFilteredReleasesBeforeDate(pat, organization, project, filter,
     return result;
 }
 
-function restGET(url, pat) {
-    return new Promise(resolve => {
-        var data = '';
+async function restGET(url, pat) {
+    console.log(`ger url:${url}`);
 
-        const options = {
-            headers: {
-                'Authorization': `Basic ${auth(pat)}`
-            },
-        };
+    let request = {
+        headers: { 'Authorization': `Basic ${auth(pat)}` }
+    }
 
-        console.log(`ger url:${url}`);
-        https.get(url, options, (resp) => {
-            // console.log(resp.headers);
+    try {
+        let response = await axios.get(url, request);
 
-            // A chunk of data has been recieved.
-            resp.on('data', (chunk) => {
-                data += chunk;
-            });
+        if (response.status != 200)
+            return null;
 
-            // The whole response has been received. Print out the result.
-            resp.on('end', () => {
-                try {
-                    let ob = Hjson.parse(data);
-                    // console.log(`end found[${JSON.stringify(ob)}]`);
-                    // console.log('=========================================================================================================================================');
-                    // console.log(`end found[${data}]`);
-                    // console.log('=========================================================================================================================================');
-                    resolve(ob);
-                } catch (error) {
-                    console.log(`${url} - ${error}`);
-                    // console.log('Exception caught');
-                    // console.log('=========================================================================================================================================');
-                    // console.log(url);
-                    // console.log(error);
-                    // console.log(data);
-                    // console.log('=========================================================================================================================================');
-                    resolve(null);
-                }
-            });
+        return response.data;
+    }
+    catch (error) {
+        return null;
+    }
 
-            resp.on('error', () => {
-                console.log("Error[GET]: " + err.message + ':[' + url + ']');
-                resolve(null);
-            });
-
-        }).on("error", (err) => {
-            console.log("Error[GET]: " + err.message + ':[' + url + ']');
-            resolve(null);
-        });
-    });
 }
 
-function restDownload(url, pat) {
-    return new Promise(resolve => {
-        var data = '';
+async function restDownload(url, pat, responseType) {
+    console.log(`download:${url}`);
 
-        const options = {
-            headers: {
-                'Authorization': `Basic ${auth(pat)}`
-            },
-        };
+    let request = {
+        headers: { 'Authorization': `Basic ${auth(pat)}` },
+        responseType: responseType
+    }
 
-        console.log(`download:${url}`);
-        https.get(url, options, (resp) => {
-            // console.log(resp.headers);
+    try {
+        let response = await axios.get(url, request);
+        if (response.status != 200)
+            return null;
 
-            // A chunk of data has been recieved.
-            resp.on('data', (chunk) => {
-                data += chunk;
-            });
-
-            // The whole response has been received. Print out the result.
-            resp.on('end', () => {
-                // console.log(`end found[${typeof (data)}]`);
-                resolve(data);
-            });
-
-        }).on("error", (err) => {
-            console.log("Error[Download]: " + err.message + ':[' + url + ']');
-        });
-    });
-}
-
-function jsonMapper(contents) {
-    let start = contents.indexOf('{');
-    validFile = contents.substring(start);
-    let cfg = Hjson.parse(validFile);
-    return cfg;
+        return response.data;
+    }
+    catch (error) {
+        return null;
+    }
 }
 
 module.exports = enumerateAzureReleases;
-module.exports.JsonMapper = jsonMapper;
