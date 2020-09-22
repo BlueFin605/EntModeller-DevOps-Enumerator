@@ -1,5 +1,4 @@
 const axios = require('axios');
-// var PromisePool = require('es6-promise-pool')
 
 function auth(pat) {
     let patStr = `:${pat}`;
@@ -14,24 +13,6 @@ async function enumerateAzureReleases(configuration) {
 
     return azureReleases;
 }
-
-// async function enumerateAzureReleases(configuration) {
-//     let releases = await getProductionReleases(configuration.pat, configuration.organization, configuration.project, configuration.filter, configuration.filterConfig, configuration.aggregateReleases);
-
-//     let values = Array.from(releases.values());
-
-//     var promiseProducer = function* () {
-//         for (let index = 0; index < values.length; index++) {
-//             yield findAdditionsForPipeline(configuration.pat, configuration.organization, configuration.project, values[index], configuration.attachmentsConfig, configuration.incEnvironment);
-//         }
-//     }
-
-//     var concurrency = 3
-//     var pool = new PromisePool(promiseProducer, concurrency)
-//     let azureReleases = await pool.start()
-
-//     return azureReleases;
-// }
 
 async function findAdditionsForPipeline(pat, organization, project, pipeline, attachmentsConfig, incEnvironment) {
     return extended = {
@@ -207,7 +188,11 @@ async function restDownload(url, pat, responseType) {
     console.log(`download:${url}`);
 
     let request = {
-        headers: { 'Authorization': `Basic ${auth(pat)}` },
+        headers: {
+            'Authorization': `Basic ${auth(pat)}`,
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept': '*/*'
+        },
         responseType: responseType
     }
 

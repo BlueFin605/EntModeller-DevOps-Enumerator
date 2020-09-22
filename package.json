@@ -1,6 +1,6 @@
 {
   "name": "@bluefin605/entmodeller-devops-enumerator",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "license": "ISC",
   "description": "",
   "main": "./build/Builder.js",
