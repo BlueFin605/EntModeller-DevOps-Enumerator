@@ -1,4 +1,5 @@
 const axios = require('axios');
+var Buffer = require('buffer').Buffer;
 var Hjson = require('hjson');
 
 function auth(pat) {
@@ -16,7 +17,7 @@ async function enumerateAzureReleases(configuration) {
 }
 
 async function findAdditionsForPipeline(pat, organization, project, pipeline, attachmentsConfig, incEnvironment) {
-    return extended = {
+    return {
         pipeline: pipeline.pipeline,
         items: await Promise.all(pipeline.items.map(m => findAdditions(pat, organization, project, m, attachmentsConfig, incEnvironment)))
     }
