@@ -1,4 +1,5 @@
 const axios = require('axios');
+var Hjson = require('hjson');
 
 function auth(pat) {
     let patStr = `:${pat}`;
@@ -164,21 +165,33 @@ async function getFilteredReleasesBeforeDate(pat, organization, project, filter,
 }
 
 async function restGET(url, pat) {
-    console.log(`ger url:${url}`);
+    console.log(`get url:${url}`);
 
     let request = {
-        headers: { 'Authorization': `Basic ${auth(pat)}` }
+        headers: { 'Authorization': `Basic ${auth(pat)}` },
+        validateStatus: function (status) {
+            return status == 429 || status == 404 || (status >= 200 && status < 300);
+        }
     }
 
     try {
-        let response = await axios.get(url, request);
+        while (true) {
+            let response = await axios.get(url, request);
 
-        if (response.status != 200)
-            return null;
+            if (response.status == 404) {
+                return null;
+            }
 
-        return response.data;
+            if (response.status != 429) {
+                return response.data;
+            }
+
+            console.log('too manay requests[get] - sleep');
+            await sleep(2000);
+        }
     }
     catch (error) {
+        // console.log(`get exception ${JSON.stringify(error.toJSON())}`);
         return null;
     }
 
@@ -190,22 +203,46 @@ async function restDownload(url, pat, responseType) {
     let request = {
         headers: {
             'Authorization': `Basic ${auth(pat)}`,
-            'Accept-Encoding': 'gzip, deflate, br',
+            // 'Accept-Encoding': 'gzip, deflate, br',
             'Accept': '*/*'
         },
-        responseType: responseType
+        responseType: responseType,
+        validateStatus: function (status) {
+            return status == 429 || status == 404 || (status >= 200 && status < 300);
+        }
     }
 
     try {
-        let response = await axios.get(url, request);
-        if (response.status != 200)
-            return null;
+        while (true) {
+            let response = await axios.get(url, request);
 
-        return response.data;
+            if (response.status == 404) {
+                return null;
+            }
+
+            if (response.status != 429) {
+                if (responseType == 'json') {
+                    if (typeof response.data === 'object')
+                        return response.data;
+                    //it is invalid json, try and use a less strict parser
+                    return Hjson.parse(response.data);
+                }
+
+                return response.data;
+            }
+
+            console.log('too manay requests[download] - sleep');
+            await sleep(2000);
+        }
     }
     catch (error) {
+        // console.log(`download exception ${JSON.stringify(error.toJSON())}`);
         return null;
     }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 module.exports = enumerateAzureReleases;
