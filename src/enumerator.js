@@ -1,6 +1,5 @@
 const axios = require('axios');
 var Buffer = require('buffer').Buffer;
-var Hjson = require('hjson');
 
 function auth(pat) {
     let patStr = `:${pat}`;
@@ -225,8 +224,13 @@ async function restDownload(url, pat, responseType) {
                 if (responseType == 'json') {
                     if (typeof response.data === 'object')
                         return response.data;
-                    //it is invalid json, try and use a less strict parser
-                    return Hjson.parse(response.data);
+                    //it is invalid json, try and remove any comments
+                    let js = JSON.parse(response.data
+                            .match(/[^\r\n]+/g)
+                            .map(m => m.trim())
+                            .filter(f => f.startsWith('//') == false)
+                            .join(''));
+                    return js;
                 }
 
                 return response.data;
