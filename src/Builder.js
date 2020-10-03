@@ -85,6 +85,11 @@ const DevOpsEnum = (function () {
                     return this
                 }
 
+                oneReleasePerDay() {
+                    internal(this).aggregateReleases = aggregateReleaseByDay;
+                    return this
+                }
+
                 build() {
                     let configuration = {
                         pat: internal(this).pat,
@@ -137,6 +142,7 @@ function doesMatchDefaultFilter(dep, filterConfig) {
     return true;
 }
 
+// find the latest release for each pipeline
 function aggregateLatest(releases) {
     return releases.reduce((accumulator, item) => {
         if (item.pipeline in accumulator) {
@@ -156,6 +162,7 @@ function aggregateLatest(releases) {
     }, {});
 }
 
+// find the latest release for each environment in each pipeline
 function aggregateLatestPerEnvironment(releases) {
     return releases.reduce((accumulator, item) => {
         if (item.pipeline in accumulator) {
@@ -178,10 +185,39 @@ function aggregateLatestPerEnvironment(releases) {
     }, {});
 }
 
+// find all releases
 function aggregateAllReleases(releases) {
     return releases.reduce((accumulator, item) => {
         if (item.pipeline in accumulator) {
             accumulator[item.pipeline].items.push(item);
+        } else {
+            accumulator[item.pipeline] = {
+                pipeline: item.pipeline,
+                items: [item]
+            };
+        }
+        return accumulator;
+    }, {});
+}
+
+
+// find one release id per day, effectively ignores the individual environments
+function aggregateReleaseByDay(releases) {
+    return releases.reduce((accumulator, item) => {
+        if (item.pipeline in accumulator) {
+            if (!accumulator[item.pipeline].items.some(s => {
+                if (s.releaseid !== item.releaseid)
+                    return false;
+
+                    let date1 = new Date(s.completedOn);
+                    date1.setHours(0,0,0,0)
+
+                    let date2 = new Date(item.completedOn);
+                    date2.setHours(0,0,0,0)
+                    return date1.valueOf() === date2.valueOf();
+            })) {
+                accumulator[item.pipeline].items.push(item);
+            }
         } else {
             accumulator[item.pipeline] = {
                 pipeline: item.pipeline,
