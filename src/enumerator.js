@@ -1,5 +1,6 @@
 const axios = require('axios');
 var Buffer = require('buffer').Buffer;
+var levenshtein = require('js-levenshtein');
 
 function auth(pat) {
     let patStr = `:${pat}`;
@@ -35,7 +36,9 @@ async function findAdditions(pat, organization, project, release, attachmentsCon
     }
 
     //get all the attachements
-    await Promise.all(Array.from(attachmentsConfig).map(a => addAttachmentToRelease(pat, organization, project, mapped, a[1])));
+    await Promise.all(Array.from(attachmentsConfig).map(a => {
+        return addAttachmentToRelease(pat, organization, project, mapped, a[1]);
+    }));
 
     return mapped;
 }
@@ -144,7 +147,10 @@ async function getFilteredReleasesBeforeDate(pat, organization, project, filter,
         mapped.status = m.deploymentStatus
         mapped.artifacts = {};
 
-        let repos = m.release.artifacts.filter(f => f.definitionReference != null && f.definitionReference.repository != null);
+        let repos = m.release.artifacts.filter(f => f.definitionReference != null && f.definitionReference.repository != null).sort((firstEl, secondEl) => { 
+            return calcLevenshtein(m.releaseDefinition.name, firstEl.alias) - calcLevenshtein(m.releaseDefinition.name, secondEl.alias); 
+        });
+
         if (repos.length > 0) {
             mapped.artifacts.repoId = repos[0].definitionReference.repository.id;
             mapped.artifacts.repoName = repos[0].definitionReference.repository.name;
@@ -163,6 +169,11 @@ async function getFilteredReleasesBeforeDate(pat, organization, project, filter,
 
     return result;
 }
+
+function calcLevenshtein(stringA, stringB) {
+    let l = levenshtein(stringA, stringB);
+    return l;
+  }
 
 async function restGET(url, pat) {
     console.log(`get url:${url}`);
